@@ -17,46 +17,74 @@ osx: &osx
 
 matrix:
   include:
-    - <<: *linux
-      env: CONAN_GCC_VERSIONS=9 CONAN_ARCHS=armv7hf CONAN_DOCKER_IMAGE=conanio/gcc9-armv7hf
-    - <<: *linux
-      env: CONAN_GCC_VERSIONS=9 CONAN_ARCHS=armv8 CONAN_DOCKER_IMAGE=conanio/gcc9-armv8
-    - <<: *linux
-      env: CONAN_GCC_VERSIONS=7 CONAN_DOCKER_IMAGE=conanio/gcc7 COVERAGE=1
-    - <<: *linux
-      env: CONAN_GCC_VERSIONS=8 CONAN_DOCKER_IMAGE=conanio/gcc8 COVERAGE=1
-    - <<: *linux
-      env: CONAN_GCC_VERSIONS=9 CONAN_DOCKER_IMAGE=conanio/gcc9 COVERAGE=1
-    - <<: *linux
-      env: CONAN_CLANG_VERSIONS=5.0 CONAN_DOCKER_IMAGE=conanio/clang50 COVERAGE=1
-    - <<: *linux
-      env: CONAN_CLANG_VERSIONS=6.0 CONAN_DOCKER_IMAGE=conanio/clang60 COVERAGE=1
-    - <<: *linux
-      env: CONAN_CLANG_VERSIONS=7.0 CONAN_DOCKER_IMAGE=conanio/clang7 COVERAGE=1
+#    - <<: *linux
+#      env: CONAN_GCC_VERSIONS=9 CONAN_ARCHS=armv7hf CONAN_DOCKER_IMAGE=conanio/gcc9-armv7hf
+#    - <<: *linux
+#      env: CONAN_GCC_VERSIONS=9 CONAN_ARCHS=armv8 CONAN_DOCKER_IMAGE=conanio/gcc9-armv8
+#    - <<: *linux
+#      env: CONAN_GCC_VERSIONS=7 CONAN_DOCKER_IMAGE=conanio/gcc7 COVERAGE=1
+#    - <<: *linux
+#      env: CONAN_GCC_VERSIONS=8 CONAN_DOCKER_IMAGE=conanio/gcc8 COVERAGE=1
+#    - <<: *linux
+#      env: CONAN_GCC_VERSIONS=9 CONAN_DOCKER_IMAGE=conanio/gcc9 COVERAGE=1
+#    - <<: *linux
+#      env: CONAN_CLANG_VERSIONS=5.0 CONAN_DOCKER_IMAGE=conanio/clang50 COVERAGE=1
+#    - <<: *linux
+#      env: CONAN_CLANG_VERSIONS=6.0 CONAN_DOCKER_IMAGE=conanio/clang60 COVERAGE=1
+#    - <<: *linux
+#      env: CONAN_CLANG_VERSIONS=7.0 CONAN_DOCKER_IMAGE=conanio/clang7 COVERAGE=1
     # libc++ 32 bit is broken in the clang8/clang9 Docker images
-    - <<: *linux
-      env: CONAN_CLANG_VERSIONS=8 CONAN_ARCHS=x86_64 CONAN_DOCKER_IMAGE=conanio/clang8 COVERAGE=1
-    - <<: *linux
-      env: CONAN_CLANG_VERSIONS=9 CONAN_ARCHS=x86_64 CONAN_DOCKER_IMAGE=conanio/clang9 COVERAGE=1
-    - <<: *osx
-      osx_image: xcode9.4
-      env: CONAN_APPLE_CLANG_VERSIONS=9.1
-    - <<: *osx
-      osx_image: xcode10.3
-      env: CONAN_APPLE_CLANG_VERSIONS=10.0
-    - <<: *osx
-      osx_image: xcode11.2
-      env: CONAN_APPLE_CLANG_VERSIONS=11.0
+#    - <<: *linux
+#      env: CONAN_CLANG_VERSIONS=8 CONAN_ARCHS=x86_64 CONAN_DOCKER_IMAGE=conanio/clang8 COVERAGE=1
+#    - <<: *linux
+#      env: CONAN_CLANG_VERSIONS=9 CONAN_ARCHS=x86_64 CONAN_DOCKER_IMAGE=conanio/clang9 COVERAGE=1
+#    - <<: *osx
+#      osx_image: xcode9.4
+#      env: CONAN_APPLE_CLANG_VERSIONS=9.1
+#    - <<: *osx
+#      osx_image: xcode10.3
+#      env: CONAN_APPLE_CLANG_VERSIONS=10.0
+#    - <<: *osx
+#      osx_image: xcode11.2
+#      env: CONAN_APPLE_CLANG_VERSIONS=11.0
 
+
+    # Code Coverage
+    - language: python
+      python:
+        - "3.7"
+      dist: bionic
+      install:
+        - CMAKE_VERSION=3.16.5
+        - CMAKE_URL="https://cmake.org/files/v${CMAKE_VERSION%.[0-9]}/cmake-${CMAKE_VERSION}-Linux-x86_64.tar.gz"
+        - mkdir cmake && travis_retry wget --no-check-certificate -O - ${CMAKE_URL} | tar --strip-components=1 -xz -C cmake
+        - export PATH=${DEPS_DIR}/cmake/bin:${PATH}
+        - cmake --version
+#        - pip install conan-package-tools
+#      env:
+#        - CONAN_GCC_VERSIONS=8
+#        - CONAN_DOCKER_IMAGE=conanio/gcc8
+        ############################################################################
+        # Install a recent CMake (unless already installed on OS X)
+        ############################################################################
+
+      script:
+        # have CMake to generate build files
+        - cd "${TRAVIS_BUILD_DIR}"
+        - mkdir build && cd build
+        - cmake .. -DCMAKE_BUILD_TYPE=Debug -DENABLE_CODE_COVERAGE=ON
+        - cmake --build . -- -j${JOBS}
+        - ctest --output-on-failure -j${JOBS}
+        - bash <(curl -s https://codecov.io/bash) -X gcov || echo "Codecov did not collect coverage reports"
 install:
   - ./.travis/install.sh
 
 script:
   - ./.travis/run.sh
   # Waiting for the following issue to be fixed before Mac OS X support can be enabled: https://github.com/RWTH-HPC/CMake-codecov/pull/15
-  - |
-    if [[ "${TRAVIS_OS_NAME}" == "linux" ]] && [[ "${COVERAGE}" == "1" ]]; then
-      cmake --build . --target gcov
-      cmake --build . --target lcov
-      bash <(curl -s https://codecov.io/bash) -X gcov || echo "Codecov did not collect coverage reports"
-    fi
+#  - |
+#    if [[ "${TRAVIS_OS_NAME}" == "linux" ]] && [[ "${COVERAGE}" == "1" ]]; then
+#      cmake --build . --target gcov
+#      cmake --build . --target lcov
+#      bash <(curl -s https://codecov.io/bash) -X gcov || echo "Codecov did not collect coverage reports"
+#    fi
