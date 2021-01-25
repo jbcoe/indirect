@@ -39,9 +39,6 @@ matrix:
     - <<: *linux
       env: CONAN_CLANG_VERSIONS=9 CONAN_ARCHS=x86_64 CONAN_DOCKER_IMAGE=conanio/clang9 COVERAGE=1
     - <<: *osx
-      osx_image: xcode9.4
-      env: CONAN_APPLE_CLANG_VERSIONS=9.1
-    - <<: *osx
       osx_image: xcode10.3
       env: CONAN_APPLE_CLANG_VERSIONS=10.0
     - <<: *osx
